@@ -1,7 +1,7 @@
 /**
  *  XboxLiveStatus
  *
- *  Copyright 2020 Jayden Phillips
+ *  Copyright 2020 cdnninja
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -13,7 +13,7 @@
  *  for the specific language governing permissions and limitations under the License.
  */
 metadata {
-	definition (name: "XboxLiveStatus", namespace: "cdnninja", author: "Jayden Phillips", cstHandler: true) {
+	definition (name: "XboxLiveStatus", namespace: "cdnninja", author: "cdnninja", cstHandler: true) {
 capability "Switch"
 		capability "musicPlayer"
         
