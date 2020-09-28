@@ -1,7 +1,7 @@
 /**
  *  XboxLiveStatus
  *
- *  Copyright 2020 Jayden Phillips
+ *  Copyright 2020 cdnninja
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -16,7 +16,7 @@
 definition(
     name: "Xbox Live Manager",
     namespace: "cdnninja",
-    author: "Jayden Phillips",
+    author: "cdnninja",
     description: "Call XAPI for xbox status with the intent of giving lighting control. ",
     category: "Convenience",
     iconUrl: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience.png",
