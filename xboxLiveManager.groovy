@@ -1,7 +1,7 @@
 /**
  *  XboxLiveStatus
  *
- *  Copyright 2020 cdnninja
+ *  Copyright 2020 Jayden Phillips
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -16,7 +16,7 @@
 definition(
     name: "Xbox Live Manager",
     namespace: "cdnninja",
-    author: "cdnninja",
+    author: "Jayden Phillips",
     description: "Call XAPI for xbox status with the intent of giving lighting control. ",
     category: "Convenience",
     iconUrl: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience.png",
@@ -24,19 +24,35 @@ definition(
     iconX3Url: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience@2x.png")
 
 preferences {
-
+    page(name: "startPage")
     page(name: "authPage")
-
+    page(name: "clientPage")
 }
 
 
-
+def startPage() {
+    if (state?.authenticationToken) { return clientPage() }
+    else { return authPage() }
+}
 
 /* Auth Page */
 def authPage() {
-    return dynamicPage(name: "authPage", , install: true) {
+    return dynamicPage(name: "authPage", nextPage: clientPage, install: false) {
         section("X API Key") {
             input "APIKey", "text", "title": "API Key", multiple: false, required: true
+
+        }
+    }
+}
+
+def clientPage() {
+    //if (!state.authenticationToken) { getAuthenticationToken() }
+    def showUninstall = state.appInstalled
+    state.authenticationToken = APIKey
+    //updateUserData()
+    return dynamicPage(name: "clientPage", uninstall: true, install: true) {
+        section("Setup Page") {
+            href "authPage", title:"Go Back to Auth Page", description: "Tap to edit..."
             input "pollEnable", "bool", title: "Enable Polling", defaultValue: "true", submitOnChange: true
 
         }
@@ -61,8 +77,7 @@ def installed() {
 }
 
 def initialize() {
-	state.authenticationToken = APIKey
-    updateUserData()
+	updateUserData()
     if (pollEnable) {
         runEvery1Minute(regularPolling)
     }
@@ -74,10 +89,12 @@ def updated() {
     log.debug "Updated with settings: ${settings}"
 
     unsubscribe()
-
+	
     if(state.authenticationToken) {
-
-          updateUser();
+		updateUserData()
+        updateUser()
+        updateUserStatus()
+          
         
     }
 
@@ -165,8 +182,8 @@ def response(evt) {
     }
     */
 }
-def updateUI(){
-	log.debug "Updating UI"
+def updateUI(onlineState, UserDevices){
+	log.debug "Updating UI for"
 	def xboxLiveUser = state.gamerTag
     if(xboxLiveUser) { 
 
@@ -177,27 +194,34 @@ def updateUI(){
         log.debug "Children DeviceID: " + child_deviceNetworkID
         log.debug "Children: " + children
         def liveUser = children.find{ d -> d.deviceNetworkId.contains(xboxLiveUser) 
-      	log.debug "OnlineState:" + state.onlineState
-        if(state.onlineState != "Offline") {
-            log.debug "Titles: " + state.devices[0].titles
-            def ActiveApp = state.devices[0].titles.find{active -> active.placement == "Full"}
-            log.debug "active app: "+  ActiveApp
+      	log.debug "OnlineState:" + onlineState
+        
+        
+        if(onlineState != "Offline") {
+        	
+            log.debug "Titles: " + UserDevices[0].titles
+            def ActiveApp = UserDevices[0].titles.find{active -> active.placement == "Full"}
+            if (ActiveApp){
+            	log.debug "active app: "+  ActiveApp.name
+            }
         }
-        if(state.onlineState == "Offline")
+        if(onlineState == "Offline")
         {
         	log.debug "setting " + children[0] + " to stopped"
    			children[0].setPlaybackState("stopped");
             children[0].setPlaybackTitle("");
-        } else if (state.onlineState == "Online" && ActiveApp.name == "Home")
+        } else if (onlineState == "Online" && (ActiveApp.name == "Home" || ActiveApp == null) )
         {
         	log.debug "setting: " + children[0] + " to Paused"
         	children[0].setPlaybackState("paused");
-            log.debug "device list: " + state.devices
-            children[0].setPlaybackTitle(ActiveApp.name);
+            log.debug "device list: " + UserDevices
+            if(ActiveApp) {
+            	children[0].setPlaybackTitle(ActiveApp.name);
+             }
         } else {
         	log.debug "setting: " + children[0] + " to Playing"
         	children[0].setPlaybackState("playing");
-            log.debug "device list: " + state.devices
+            log.debug "device list: " + UserDevices
             children[0].setPlaybackTitle(ActiveApp.name);
         
         }
@@ -336,6 +360,7 @@ def regularPolling() {
 
     log.debug "Polling for user state"
     if(state.authenticationToken) {
+    	log.debug "Passed regular polling check.  Running update."
         updateUserStatus();
     }
 
@@ -345,13 +370,14 @@ def updateUserStatus(){
     log.debug "Executing 'updateUserStatus'"
 	log.debug "xuid: " + state.accountXUID
     def resp = executeRequest("${state.accountXUID}/presence", "GET")
-    state.onlineState = resp.data.state 
-    state.LastSeen = resp.data.lastSeen
-    state.devices = resp.data.devices
-    log.debug "OnlineState is: " + state.onlineState
-    log.debug "Devices: " + state.devices
-    log.debug "Last Seen: " + state.LastSeen
-    updateUI()
+    if (resp){
+        log.debug "Update User Status OnlineState is: " + resp.data.state 
+        log.debug "Update User Status Devices: " + resp.data.devices
+        log.debug "Calling update UI"
+        //log.debug "Last Seen: " + state.LastSeen
+
+        updateUI(resp.data.state, resp.data.devices)
+    }
 
 }
 
@@ -359,10 +385,12 @@ def updateUserData(){
     log.debug "Executing 'updateXUID'"
 
     def resp = executeRequest("accountXuid", "GET")
-    state.accountXUID = resp.data.xuid
-    state.gamerTag = resp.data.gamerTag
-    log.debug "xuid: " + state.accountXUID
-    log.debug "Gamer Tag: " + state.gamerTag
+    if (resp) {
+        state.accountXUID = resp.data.xuid
+        state.gamerTag = resp.data.gamerTag
+        log.debug "xuid: " + state.accountXUID
+        log.debug "Gamer Tag: " + state.gamerTag
+    }
 
 	
 }
