@@ -203,21 +203,13 @@ def updateUI(onlineState, UserDevices){
             def ActiveApp = UserDevices[0].titles.find{active -> active.placement == "Full"}
             if (ActiveApp){
             	log.debug "active app: "+  ActiveApp.name
-            }
+            } else { ActiveApp.name = "Home"}
         }
         if(onlineState == "Offline")
         {
         	log.debug "setting " + children[0] + " to stopped"
    			children[0].setPlaybackState("stopped");
-            children[0].setPlaybackTitle("");
-        } else if (onlineState == "Online" && (ActiveApp.name == "Home" || ActiveApp == null) )
-        {
-        	log.debug "setting: " + children[0] + " to Paused"
-        	children[0].setPlaybackState("paused");
-            log.debug "device list: " + UserDevices
-            if(ActiveApp) {
-            	children[0].setPlaybackTitle(ActiveApp.name);
-             }
+            children[0].setPlaybackTitle(""); 
         } else {
         	log.debug "setting: " + children[0] + " to Playing"
         	children[0].setPlaybackState("playing");
