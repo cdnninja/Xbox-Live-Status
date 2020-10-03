@@ -78,6 +78,7 @@ def installed() {
 
 def initialize() {
 	updateUserData()
+    state.Child = getChildDevice(state.gamerTag)
     if (pollEnable) {
         runEvery1Minute(regularPolling)
     }
@@ -183,42 +184,64 @@ def response(evt) {
     */
 }
 def updateUI(onlineState, UserDevices){
-	log.debug "Updating UI for"
+	
+    log.debug "onlineState in UpdateUI: " + onlineState
 	def xboxLiveUser = state.gamerTag
+    log.debug "Updating UI: " + xboxLiveUser
     if(xboxLiveUser) { 
 
         log.info "Updating Xbox User: " + xboxLiveUser
 
-        def children = getChildDevices();
-        def child_deviceNetworkID = childDeviceID(xboxLiveUser);
-        log.debug "Children DeviceID: " + child_deviceNetworkID
+        
+        //def child_deviceNetworkID = childDeviceID(xboxLiveUser);
+        if(!state.Child) {
+        	state.child = getChildDevice(xboxLiveUser)
+        }
+        def children = state.child 
+        //log.debug "Children DeviceID: " + child_deviceNetworkID
         log.debug "Children: " + children
-        def liveUser = children.find{ d -> d.deviceNetworkId.contains(xboxLiveUser) 
+        def liveUser = children.find{ d -> d.deviceNetworkId.contains(xboxLiveUser)
       	log.debug "OnlineState:" + onlineState
+        def name
         
-        
-        if(onlineState != "Offline") {
+        if(onlineState == "Online") {
         	
             log.debug "Titles: " + UserDevices[0].titles
             def ActiveApp = UserDevices[0].titles.find{active -> active.placement == "Full"}
+            log.debug ActiveApp
+            
             if (ActiveApp){
+            	name = ActiveApp.name.toString()
             	log.debug "active app: "+  ActiveApp.name
-            } else { ActiveApp.name = "Home"}
+            } else {  name = "Home"}
         }
+
         if(onlineState == "Offline")
         {
-        	log.debug "setting " + children[0] + " to stopped"
-   			children[0].setPlaybackState("stopped");
-            children[0].setPlaybackTitle(""); 
-        } else {
-        	log.debug "setting: " + children[0] + " to Playing"
-        	children[0].setPlaybackState("playing");
-            log.debug "device list: " + UserDevices
-            children[0].setPlaybackTitle(ActiveApp.name);
+        	log.debug "setting " + children + " to stopped"
+   			children.setPlaybackState("stopped");
+            children.setPlaybackTitle(""); 
+        }
+       log.debug "Not Offline"
+        if(onlineState == "Online") {
+        	log.debug "online"
+        	if(name != "Home") {
+            	log.debug "Not Home"
+                log.debug "setting: " + children + " to Playing"
+                children.setPlaybackState("playing");
+                log.debug "device list: " + UserDevices
+                children.setPlaybackTitle(name);
+            }
+         	if(name == "Home") {
+                log.debug "setting: " + children + " to paused"
+                children.setPlaybackState("paused");
+                log.debug "device list: " + UserDevices
+                children.setPlaybackTitle(name);
+            }
         
         }
         
-        
+        log.debug "End"
   
         }  
 
